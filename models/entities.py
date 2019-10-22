@@ -1,5 +1,5 @@
 from datetime import date
-from base import BaseModel
+from models.base import BaseModel
 
 class UserModel(BaseModel):
     _TABLE='Users'

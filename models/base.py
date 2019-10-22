@@ -8,12 +8,6 @@ class SQLiteModel:
     _DATABASE = None
     _TABLE = None
     _MAPPING = {}
-    __TYPE_MAPPING = {
-        int : 'INTEGER',
-        str : 'TEXT',
-        float : 'REAL',
-        date : 'DATE'
-    }
 
 
     @classmethod
@@ -22,23 +16,23 @@ class SQLiteModel:
 
 
     @classmethod
-    def get_by_pk(cls, pk):
+    def get_one(cls, pk):
         conn = cls._connect()
         cur = conn.cursor()
 
         cur.execute(
             """
                 SELECT *
-                FROM :table
+                FROM """ + cls._TABLE + """
                 WHERE id = :pk
             """,
-            {'table': cls._TABLE, 'pk': pk}
+            {'pk': pk}
         )
 
         result = {}
         record = cur.fetchone()
         for idx, col in enumerate(cur.description):
-            result[col] = record[idx]
+            result[col[0]] = record[idx]
         conn.close()
         return result
 
@@ -47,9 +41,9 @@ class SQLiteModel:
     def create_mapping(cls):
         conn = cls._connect()
         cur = conn.cursor()
-        mapfortable = tuple([str(k) + " " + str(cls.__TYPE_MAPPING.get(v)) for k, v in cls._MAPPING.items()])
+        cols = ', '.join(str(col_name) + ' ' + col_type.__name__ for col_name, col_type in cls._MAPPING.items())
         
-        cur.execute("""CREATE TABLE IF NOT EXISTS ? (id INTEGER AUTOINCREMENT PRIMARY KEY""" + (",?" * len(mapfortable)) + """)""", (cls._TABLE,) + mapfortable)
+        cur.execute("""CREATE TABLE IF NOT EXISTS """ + cls._TABLE + """ (id INTEGER PRIMARY KEY NOT NULL, """ + cols + """)""")
 
         conn.commit()
         conn.close()
@@ -58,10 +52,11 @@ class SQLiteModel:
     def insert(self):
         conn = self._connect()
         cur = conn.cursor()
-        keys = tuple([str(k) for k in self._MAPPING.keys()])
-        vals = tuple([self.__dict__[v] for v in self._MAPPING.keys()])
+        cols = ', '.join(str(col_name) for col_name in self._MAPPING.keys())
+        print(cols)
+        vals = tuple([getattr(self, v) for v in self._MAPPING.keys()])
 
-        cur.execute("""INSERT INTO ?("""+ ("?," * len(keys))[:-1] +""") VALUES("""+ ("?," * len(vals))[:-1] +""")""", (self._TABLE,) + keys + vals)
+        cur.execute("""INSERT INTO """ + self._TABLE + """ ("""+ cols +""") VALUES("""+ ("?," * len(vals))[:-1] +""")""", vals)
         
         pk = cur.lastrowid
 
@@ -70,15 +65,16 @@ class SQLiteModel:
         
         return pk
 
+
     def delete_by_pk(self, pk):
         conn = self._connect()
         cur = conn.cursor()
 
         cur.execute("""
-                        DELETE FROM :table 
+                        DELETE FROM """+ self._TABLE + """
                         WHERE id = :pk
                     """, 
-                    {"table" : self._TABLE, "pk" : pk}
+                    {"pk" : pk}
         )
 
         conn.commit()
@@ -86,12 +82,14 @@ class SQLiteModel:
 
 
 class BaseModel(SQLiteModel):
-    _DATABASE = 'def.db'
+    _DATABASE = 'test.db'
+
 
     def __getattr__(self, attr):
         if attr in self._MAPPING.keys():
             return None
         raise AttributeError()
+
 
     def __setattr__(self, attr, val):
         if attr in self._MAPPING.keys():
@@ -100,30 +98,35 @@ class BaseModel(SQLiteModel):
                 return
         raise AttributeError()
 
+
     def fill(self, data):
         for key, val in data.items():
             if self._validate(key, val):
                 self.__dict__[key] = val
-    
+
+
     def _validate(self, key, val):
         key_type = self._MAPPING.get(key)
 
         if not key_type:
-            raise ValidationError
+            return False
 
-        if key_type != type(val):
+        if val and key_type != type(val):
             raise ValidationError
 
         return True
 
+
     @classmethod
     def get_by_pk(cls, pk):
-        record = cls.get_by_pk(pk)
+        record = cls.get_one(pk)
         obj = cls()
-        obj.fill_data(record)
+        obj.fill(record)
         return obj
     
-    def get_data(self):
+
+    @property
+    def serialize(self):
         data = {}
 
         for key in self._MAPPING:
