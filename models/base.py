@@ -36,6 +36,27 @@ class SQLiteModel:
         conn.close()
         return result
 
+    
+    @classmethod
+    def get_all(cls):
+        conn = cls._connect()
+        cur = conn.cursor()
+
+        cur.execute("""SELECT * FROM """ + cls._TABLE)
+
+        result = []
+        records = cur.fetchall()
+        for record in records:
+            tmp = {}
+
+            for idx, col in enumerate(cur.description):
+                tmp[col[0]] = record[idx]
+
+            result.append(tmp)
+
+        conn.close()
+        return result
+
 
     @classmethod
     def create_mapping(cls):
