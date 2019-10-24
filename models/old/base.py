@@ -8,6 +8,12 @@ class SQLiteModel:
     _DATABASE = None
     _TABLE = None
     _MAPPING = {}
+    __TYPE_MAPPING = {
+        int : 'INTEGER',
+        float : 'REAL',
+        str : 'TEXT',
+        date : 'DATE'
+    }
 
 
     @classmethod
@@ -23,9 +29,9 @@ class SQLiteModel:
         cur.execute(
             """
                 SELECT *
-                FROM """ + cls._TABLE + """
+                FROM {table}
                 WHERE id = :pk
-            """,
+            """.format(table=cls._TABLE),
             {'pk': pk}
         )
 
@@ -42,7 +48,9 @@ class SQLiteModel:
         conn = cls._connect()
         cur = conn.cursor()
 
-        cur.execute("""SELECT * FROM """ + cls._TABLE)
+        cur.execute("""SELECT * 
+                       FROM {table}""".format(
+                           table=cls._TABLE))
 
         result = []
         records = cur.fetchall()
@@ -62,9 +70,14 @@ class SQLiteModel:
     def create_mapping(cls):
         conn = cls._connect()
         cur = conn.cursor()
-        cols = ', '.join(str(col_name) + ' ' + col_type.__name__ for col_name, col_type in cls._MAPPING.items())
         
-        cur.execute("""CREATE TABLE IF NOT EXISTS """ + cls._TABLE + """ (id INTEGER PRIMARY KEY NOT NULL, """ + cols + """)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS {table} (id INTEGER PRIMARY KEY NOT NULL, {cols})""".format(
+            table=cls._TABLE,
+            cols=', '.join('{name} {type}'.format(
+                name=name,
+                type=cls.__TYPE_MAPPING[cls._MAPPING[name]]
+            ) for name in cls._MAPPING)
+        ))
 
         conn.commit()
         conn.close()
@@ -73,11 +86,13 @@ class SQLiteModel:
     def insert(self):
         conn = self._connect()
         cur = conn.cursor()
-        cols = ', '.join(str(col_name) for col_name in self._MAPPING.keys())
-        print(cols)
-        vals = tuple([getattr(self, v) for v in self._MAPPING.keys()])
+        vals = [getattr(self, v) for v in self._MAPPING.keys()]
 
-        cur.execute("""INSERT INTO """ + self._TABLE + """ ("""+ cols +""") VALUES("""+ ("?," * len(vals))[:-1] +""")""", vals)
+        cur.execute("""INSERT INTO {table} ({cols}) VALUES({phs})""".format(
+            table=self._TABLE,
+            cols=', '.join(self._MAPPING),
+            phs=', '.join('?' * len(self._MAPPING))
+        ), vals)
         
         pk = cur.lastrowid
 
@@ -92,9 +107,9 @@ class SQLiteModel:
         cur = conn.cursor()
 
         cur.execute("""
-                        DELETE FROM """+ self._TABLE + """
+                        DELETE FROM {table}
                         WHERE id = :pk
-                    """, 
+                    """.format(table=self._TABLE), 
                     {"pk" : pk}
         )
 

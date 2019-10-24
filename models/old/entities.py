@@ -1,5 +1,5 @@
 from datetime import date
-from models.base import BaseModel
+from .base import BaseModel
 
 class UserModel(BaseModel):
     _TABLE='Users'
@@ -9,7 +9,7 @@ class UserModel(BaseModel):
         'password' : str,
         'email' : str,
         'birthday' : date,
-        'registration_date' : date,
+        'join_date' : date,
         'info' : str,
         'phone_number' : str,
         'city' : str
@@ -20,26 +20,16 @@ class SongModel(BaseModel):
     _TABLE = 'Songs'
     _MAPPING = {
         'title': str,
-        'author': str,
-        'song_duration ': str,
+        'author_id': int,
         'publication_date': date,
     }
 
 
-class GroupModel(BaseModel):
-    _TABLE = 'Groups'
+class ArtistsModel(BaseModel):
+    _TABLE = 'Artists'
     _MAPPING = {
-        'title': str,
-        'group_members': str,
+        'name': str,
         'establishment_date': date,
-    }
-
-
-class GroupMemberModel(BaseModel):
-    _TABLE = 'GroupMember'
-    _MAPPING = {
-        'group_id': int,
-        'user_id': int,
     }
 
 
@@ -54,7 +44,7 @@ class MessageModel(BaseModel):
 
 
 class ArticleModel(BaseModel):
-    _TABLE = 'Article'
+    _TABLE = 'Articles'
     _MAPPING = {
         'creator_id': int,
         'title': str,
@@ -64,7 +54,7 @@ class ArticleModel(BaseModel):
 
 
 class SearchEntryModel(BaseModel):
-    _TABLE = 'SearchEntry'
+    _TABLE = 'SearchEntries'
     _MAPPING = {
         'creator_id': int,
         'text': str,
