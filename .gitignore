@@ -2,4 +2,5 @@
 .vscode/
 .vs/
 __pycache__/
+env/
 test.db
