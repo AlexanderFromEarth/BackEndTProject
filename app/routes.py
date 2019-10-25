@@ -1,14 +1,15 @@
-from app import app
-from flask import request
-from flask import render_template
 import datetime
+
+from flask import request, render_template
+
+from app import app
 
 
 @app.route('/')
 def main():
     return render_template("index.html")
 
-@app.route('/login', method = ['GET','POST'])
+@app.route('/login', methods = ['GET','POST'])
 def login():
     if request.method == 'POST':
        pass
@@ -61,9 +62,9 @@ def get_article():
 def get_all_songs():
     pass
 
-@app.route('/songs/<int:id>',method = ['GET','POST'])
+@app.route('/songs/<int:id>',methods = ['GET','POST'])
 def song(id):
     if request.method == 'GET':
-      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5)
-    if request.method == 'POST':
-      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5)
+      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5))
+    elif request.method == 'POST':
+      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5))
