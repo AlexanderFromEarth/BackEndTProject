@@ -8,11 +8,9 @@ import datetime
 def main():
     return render_template("index.html")
 
-@app.route('/login', method = ['GET','POST'])
+@app.route('/login', methods = ['GET','POST'])
 def login():
-    if request.method == 'POST':
-       pass
-    return render_template('login.html')
+    pass
 
 @app.route('/registration') 
 def registration(): 
@@ -20,17 +18,18 @@ def registration():
 
 @app.route('/users')
 def all_users():
-    pass
+    list_users = [{'realname':'Костя','username':'Константин'}, {'realname':'Пуська', 'username':'Пусь'}]
+    return render_template("list_users.html", users = list_users)
 
 @app.route('/users/<id>') 
-def get_user(): 
+def get_user(id): 
     return render_template("my_page.html", 
     name="Alex", 
     surname="Gas", 
     mail="megapoc@mail.ru")
 
 @app.route('/users/<id>/settings')
-def settings():
+def settings(id):
     pass
 
 @app.route('/artists')
@@ -38,7 +37,7 @@ def get_all_artists():
     pass
 
 @app.route('/artists/<id>')
-def get_artist():
+def get_artist(id):
     pass
 
 @app.route('/bulletin_board')
@@ -46,7 +45,7 @@ def get_list_advertisement():
     pass
 
 @app.route('/bulletin_board/<id>')
-def get_ad():
+def get_ad(id):
     pass
 
 @app.route('/articles')
@@ -54,16 +53,18 @@ def get_all_articles():
     pass
 
 @app.route('/articles/<id>')
-def get_article():
+def get_article(id):
     pass
 
 @app.route('/songs')
 def get_all_songs():
     pass
 
-@app.route('/songs/<int:id>',method = ['GET','POST'])
+@app.route('/songs/<int:id>', methods = ['GET','POST'])
 def song(id):
-    if request.method == 'GET':
-      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5)
-    if request.method == 'POST':
-      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5)
+      return render_template(
+          "song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5))
+
+@app.route('/songs/add_song')
+def add_song():
+      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date.today())
