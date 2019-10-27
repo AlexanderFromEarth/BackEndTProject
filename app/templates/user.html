@@ -1,4 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-    Имя: <p>{{user.realname}}</p>
+    Имя: <p>{{user.realname}}</p><br>
+    {% if user.username == cur_user %}
+        <form method="POST" action="{{ url_for('user', username=user.username)}}">
+            Old Password: <input type="password" name="oldpass"><br>
+            New Password: <input type="password" name="newpass"><br>
+            <input type="submit" value="Register">
+        </form>
+    {% endif %}
 {% endblock %}

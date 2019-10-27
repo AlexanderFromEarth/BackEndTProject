@@ -1,6 +1,6 @@
 import datetime
 
-from flask import request, render_template, redirect, make_response, abort
+from flask import request, render_template, redirect, make_response, abort, session
 from sqlalchemy.exc import IntegrityError
 
 from . import app, bcrypt, models
@@ -18,10 +18,9 @@ def login():
         if not user:
             abort(404) # Need to change
 
-        if bcrypt.check_password_hash(user.password, request.form.get('password')):
-            resp = make_response(redirect('/'))
-            resp.set_cookie('username', user.username, 1)
-            return resp
+        if user.check_password(request.form.get('password')):
+            session['name'] = user.username
+            return redirect('/users/{}'.format(user.username))
         else:
             abort(404)
     elif request.method == 'GET':
@@ -35,6 +34,13 @@ def registration():
                            password=bcrypt.generate_password_hash(request.form.get('password'), 10),
                            realname=request.form.get('realname'),
                            email=request.form.get('email'))
+
+        if models.User.query.filter_by(username=user.username).first():
+            return render_template('registration.html', error='Пользователь с таким именем уже существует')
+
+        if models.User.query.filter_by(email=user.email).first():
+            return render_template('registration.html', error='Пользователь с таким email уже существует')
+
         models.db.session.add(user)
         
         try:
@@ -52,14 +58,20 @@ def all_users():
     users = models.User.query.all()
     return render_template("users.html", users=users)
 
-@app.route('/users/<username>') 
+@app.route('/users/<username>', methods=['GET', 'POST']) 
 def user(username):
     user = models.User.query.filter_by(username=username).first()
+    cur_user = session.get('name')
+
+    if request.method == 'POST':
+        if user.check_password(request.form.get('oldpass')):
+            user.set_password(request.form.get('newpass'))
+            models.db.session.commit()
 
     if not user:
         abort(404)
 
-    return render_template("user.html", user=user)
+    return render_template("user.html", user=user, cur_user=cur_user)
 
 @app.route('/users/<id>/settings')
 def settings(id):

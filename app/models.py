@@ -1,4 +1,4 @@
-from . import db
+from . import db, bcrypt
 
 
 class Article(db.Model):
@@ -38,3 +38,9 @@ class User(db.Model):
     realname = db.Column(db.String(120), nullable=False)
     birth_date = db.Column(db.Date, nullable=True)
     phone_number = db.Column(db.String, nullable=True)
+
+    def set_password(self, password):
+        self.password = bcrypt.generate_password_hash(password)
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password, password)

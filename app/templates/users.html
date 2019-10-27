@@ -2,6 +2,6 @@
 {% block content %}
     <h1>Список пользователей</h1>
     {% for user in users %}
-        <a href = "{{ url_for('user', username=user.username)}}">{{user.username}}</a>
+        <a href = "{{ url_for('user', username=user.username)}}">{{user.username}}</a><br>
     {% endfor %}
 {% endblock %}
