@@ -1,33 +1,65 @@
 import datetime
 
-from flask import request, render_template
+from flask import request, render_template, redirect, make_response, abort
+from sqlalchemy.exc import IntegrityError
 
-from . import app
+from . import app, bcrypt, models
 
 
 @app.route('/')
 def main():
     return render_template("index.html")
 
-@app.route('/login', methods = ['GET','POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    pass
+    if request.method == 'POST':
+        user = models.User.query.filter_by(username=request.form.get('login')).first()
 
-@app.route('/registration') 
-def registration(): 
-    return render_template("registration.html") 
+        if not user:
+            abort(404) # Need to change
 
-@app.route('/users')
+        if bcrypt.check_password_hash(user.password, request.form.get('password')):
+            resp = make_response(redirect('/'))
+            resp.set_cookie('username', user.username, 1)
+            return resp
+        else:
+            abort(404)
+    elif request.method == 'GET':
+        return render_template('login.html')
+    
+
+@app.route('/registration', methods=['GET', 'POST']) 
+def registration():
+    if request.method == "POST":
+        user = models.User(username=request.form.get('login'), 
+                           password=bcrypt.generate_password_hash(request.form.get('password'), 10),
+                           realname=request.form.get('realname'),
+                           email=request.form.get('email'))
+        models.db.session.add(user)
+        
+        try:
+            models.db.session.commit()
+        except IntegrityError:
+            models.db.session.rollback()
+        finally:
+            return redirect('/')
+    
+    return render_template("registration.html")
+
+
+@app.route('/users/')
 def all_users():
-    list_users = [{'realname':'Костя','username':'Константин'}, {'realname':'Пуська', 'username':'Пусь'}]
-    return render_template("list_users.html", users = list_users)
+    users = models.User.query.all()
+    return render_template("users.html", users=users)
 
-@app.route('/users/<id>') 
-def get_user(id): 
-    return render_template("my_page.html", 
-    name="Alex", 
-    surname="Gas", 
-    mail="megapoc@mail.ru")
+@app.route('/users/<username>') 
+def user(username):
+    user = models.User.query.filter_by(username=username).first()
+
+    if not user:
+        abort(404)
+
+    return render_template("user.html", user=user)
 
 @app.route('/users/<id>/settings')
 def settings(id):

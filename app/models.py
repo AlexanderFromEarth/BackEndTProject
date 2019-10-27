@@ -8,7 +8,7 @@ class Article(db.Model):
     title = db.Column(db.String(80), nullable=False)
     text = db.Column(db.String(80), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('users', laze=True))
+    user = db.relationship('User', backref=db.backref('users', lazy=True))
 
 
 class Artist(db.Model):
@@ -25,7 +25,7 @@ class Song(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), nullable=False)
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), nullable=False)
-    artist = db.relationship('Artist', backref=db.backref('songs', laze=True))
+    artist = db.relationship('Artist', backref=db.backref('songs', lazy=True))
 
 
 class User(db.Model):
@@ -33,6 +33,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.Binary, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
     realname = db.Column(db.String(120), nullable=False)
     birth_date = db.Column(db.Date, nullable=True)

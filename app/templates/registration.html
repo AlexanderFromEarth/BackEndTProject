@@ -1,11 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-    Логин: <input><br>
-    Пароль: <input type="password"><br>
-    Подтверждение пароля: <input type="password"><br>
-    Почта: <input><br>
-    Имя: <input><br>
-    Фамилия: <input><br>
-<button type="submit">Зарегистрироваться</button>
-<button>Отмена</button>
+      <form method="POST" action="/registration">
+        Login: <input name="login"><br>
+        Password: <input type="password" name="password"><br>
+        RealName: <input name="realname"><br>
+        E-Mail: <input type="email" name="email" ><br>
+        <input type="submit" value="Register">
+      </form>
 {% endblock %}

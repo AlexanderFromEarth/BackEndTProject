@@ -6,4 +6,4 @@ env/
 bin/
 lib/
 include/
-test.db
+my.db
