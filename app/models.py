@@ -1,0 +1,39 @@
+from . import db
+
+
+class Article(db.Model):
+    __tablename__ = 'articles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(80), nullable=False)
+    text = db.Column(db.String(80), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user = db.relationship('User', backref=db.backref('users', laze=True))
+
+
+class Artist(db.Model):
+    __tablename__ = 'artists'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    creation_date = db.Column(db.Date, nullable=True)
+
+
+class Song(db.Model):
+    __tablename__ = 'songs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(80), nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), nullable=False)
+    artist = db.relationship('Artist', backref=db.backref('songs', laze=True))
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String, unique=True, nullable=False)
+    realname = db.Column(db.String(120), nullable=False)
+    birth_date = db.Column(db.Date, nullable=True)
+    phone_number = db.Column(db.String, nullable=True)

@@ -3,4 +3,7 @@
 .vs/
 __pycache__/
 env/
+bin/
+lib/
+include/
 test.db

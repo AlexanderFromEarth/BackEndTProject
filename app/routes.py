@@ -2,7 +2,7 @@ import datetime
 
 from flask import request, render_template
 
-from app import app
+from . import app
 
 
 @app.route('/')
