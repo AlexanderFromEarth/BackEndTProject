@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Artist list</h1>
+    {% for artist in artists %}
+        <a href = "{{ url_for('artist', id=artist.id)}}">{{artist.name}}</a><br>
+    {% endfor %}
+{% endblock %}

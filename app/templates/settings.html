@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+    <form method="GET" action="/settings/create_artist">
+        <input type="submit" value="Create artist">
+    </form>
+    <form method="POST" action="/settings">
+        Old Password: <input type="password" name="oldpass"><br>
+        New Password: <input type="password" name="newpass"><br>
+        <input type="submit" value="Change password">
+    </form>
+    <form method="POST" action="/settings/delete_user">
+        <input type="submit" value="DELETE ME">
+    </form>
+{% endblock %}

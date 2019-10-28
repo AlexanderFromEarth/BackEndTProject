@@ -7,12 +7,14 @@
         <a href = "/">Main</a>
         <a href = "/my_song">My Song</a>
         <a href = "/users">Users</a>
+        <a href = "/artists">Artists</a>
         <a href = "/add_song">Add song</a>
         {% if not session.get('name') %}
         <a href = "/login">Login</a>
         <a href = "/registration">Registration</a>
         {% else %}
         <a href = "{{url_for('user', username=session.get('name'))}}">My Page</a>
+        <a href= "/logout">Logout</a>
         {% endif %}
         <hr>
             {% block content %}{% endblock %}
