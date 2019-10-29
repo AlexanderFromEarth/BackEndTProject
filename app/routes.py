@@ -3,7 +3,7 @@ import datetime
 from flask import request, render_template, redirect, make_response, abort, session
 from sqlalchemy.exc import IntegrityError
 
-from . import app, bcrypt, lm, models
+from . import app, bcrypt, models
 
 
 @app.route('/')
@@ -130,6 +130,8 @@ def get_artist(id):
 def create_artist():
     if request.method == 'POST':        
         cur_user = models.User.query.filter_by(username=session.get('name')).first()
+        if not cur_user:
+            return redirect('/')
         artist = models.Artist(name = request.form.get('name'),
                                creation_date = datetime.date.today())
 
