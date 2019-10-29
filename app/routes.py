@@ -81,7 +81,7 @@ def user(username):
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
-    cur_user = models.User.query.filter_by(username=session['name']).first()
+    cur_user = models.User.query.filter_by(username=session.get('name')).first()
 
     if not cur_user:
         abort(404)
@@ -95,7 +95,7 @@ def settings():
 
 
 @app.route('/settings/delete_user', methods=['POST'])
-def delete():
+def delete_user():
     user = models.User.query.filter_by(username=session.get('name')).first()
     models.db.session.delete(user)
 
@@ -128,7 +128,35 @@ def get_artist(id):
 
 @app.route('/settings/create_artist', methods=['GET', 'POST'])
 def create_artist():
-    pass
+    if request.method == 'POST':        
+        cur_user = models.User.query.filter_by(username=session.get('name')).first()
+        artist = models.Artist(name = request.form.get('name'),
+                               creation_date = datetime.date.today())
+
+        if models.Artist.query.filter_by(name= artist.name).first():
+            return render_template('add_artist.html', error='Name already exists')
+        artist.members.append(cur_user)
+        models.db.session.add(artist)
+        
+        try:
+            models.db.session.commit()
+        except IntegrityError:
+            models.db.session.rollback()
+        finally:
+            return redirect('/artists')
+    return render_template('add_artist.html')
+
+@app.route('/artists/<id>/settings/delete_artist', methods=['POST'])
+def delete_artist(id):
+    artist = models.Artist.filter_by(id).first()
+    models.db.session.delete(artist)
+
+    try:
+        models.db.session.commit()
+    except IntegrityError:
+        models.db.session.rollback()
+    finally:
+        return redirect('/artists')
 
 
 @app.route('/bulletin_board')
