@@ -7,3 +7,4 @@ bin/
 lib/
 include/
 my.db
+SQLite Session.sql

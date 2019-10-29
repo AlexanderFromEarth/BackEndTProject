@@ -3,7 +3,7 @@ import datetime
 from flask import request, render_template, redirect, make_response, abort, session
 from sqlalchemy.exc import IntegrityError
 
-from . import app, bcrypt, models
+from . import app, bcrypt, lm, models
 
 
 @app.route('/')
@@ -54,10 +54,11 @@ def registration():
         
         try:
             models.db.session.commit()
+            session['name'] = user.username
         except IntegrityError:
             models.db.session.rollback()
         finally:
-            return redirect('/')
+            return redirect('/users/{}'.format(user.username))
     
     return render_template("registration.html")
 
@@ -71,20 +72,19 @@ def all_users():
 @app.route('/users/<username>', methods=['GET']) 
 def user(username):
     user = models.User.query.filter_by(username=username).first()
-    cur_user = session.get('name')
 
     if not user:
         abort(404)
 
-    return render_template('user.html', user=user, cur_user=cur_user)
+    return render_template('user.html', user=user)
 
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
-    cur_user = models.User.query.filter_by(username=session['name']).first()
+    cur_user = models.User.query.filter_by(username=session.get('name')).first()
 
     if not cur_user:
-        abort(404)
+        return redirect('/')
     
     if request.method == 'POST':
         if cur_user.check_password(request.form.get('oldpass')):
@@ -126,19 +126,85 @@ def get_artist(id):
     return render_template('artist.html', artist=artist)
 
 
-@app.route('/settings/create_artist', methods=['GET', 'POST'])
+@app.route('/artists/create_artist', methods=['GET', 'POST'])
 def create_artist():
     pass
 
 
-@app.route('/bulletin_board')
-def get_list_advertisement():
-    pass
+@app.route('/bulletins/')
+def bulletins():
+    bulletins = models.Bulletin.query.all()
+    return render_template('bulletins.html', bulletins=bulletins)
 
 
-@app.route('/bulletin_board/<id>')
-def get_ad(id):
-    pass
+@app.route('/bulletins/create', methods=['GET', 'POST'])
+def create_bulletin():
+    if not session.get('name'):
+        return redirect('/bulletins')
+
+    if request.method == 'GET':
+        return render_template('create_bulletin.html', roles=models.Role.query.all())
+    elif request.method == 'POST':
+        bulletin = models.Bulletin(title=request.form.get('title'), 
+                                   text=request.form.get('text'), 
+                                   user=models.User.query.filter_by(username=session.get('name')).first(),
+                                   role=models.Role.query.filter_by(name=request.form.get('role')).first())
+        
+        try:
+            models.db.session.commit()
+        except IntegrityError:
+            models.db.session.rollback()
+        finally:
+            return redirect('/bulletins/{}'.format(bulletin.id))
+
+
+@app.route('/bulletins/<id>', methods=['GET'])
+def bulletin(id):
+    bulletin = models.Bulletin.query.filter_by(id=id).first()
+
+    if not bulletin:
+        abort(404)
+
+    return render_template('bulletin.html', bulletin=bulletin)
+
+
+@app.route('/bulletins/<id>/change', methods=['GET', 'POST'])
+def change_bulletins(id):
+    bulletin = models.Bulletin.query.filter_by(id=id).first()
+
+    if not bulletin:
+        abort(404)
+    
+    if request.method == 'GET':
+        return render_template('change_bulletin.html', bulletin=bulletin)
+    elif request.method == 'POST':
+        bulletin.title = request.form.get('title')
+        bulletin.text = request.form.get('text')
+        bulletin.role = request.form.get('role')
+
+        models.db.session.commit()
+
+        return redirect('/bulletins/<id>')
+
+
+@app.route('/bulletins/<id>/delete', methods=['POST'])
+def delete_bulletins(id):
+    bulletin = models.Bulletin.query.filter_by(id=id).first()
+
+    if not bulletin:
+        abort(404)
+    
+    if session.get('name') != bulletin.user.username:
+        return redirect('/bulletins/<id>')
+    
+    models.db.session.delete(bulletin)
+
+    try:
+        models.db.session.commit()
+    except IntegrityError:
+        models.db.session.rollback()
+    finally:
+        return redirect('/bulletins')
 
 
 @app.route('/articles')
