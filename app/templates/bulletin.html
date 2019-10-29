@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+    Title: {{bulletin.title}}<br>
+    Text:  {{bulletin.text}}<br>
+    Author:<a href="{{ url_for('user', username=bulletin.user.username)}}">{{bulletin.user.username}}</a><br>
+    {% if session.get('name') == bulletin.user.username %}
+    <form method="GET" action="{{ url_for('change_bulletins', id=bulletin.id) }}">
+        <input type="submit" value="Change">
+    </form>
+    {% endif %}
+{% endblock %}

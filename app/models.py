@@ -8,7 +8,7 @@ class Article(db.Model):
     title = db.Column(db.String(80), nullable=False)
     text = db.Column(db.String(80), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('users', lazy=True))
+    user = db.relationship('User', backref=db.backref('users', lazy='dynamic'))
 
 
 Member = db.Table('members',
@@ -31,7 +31,7 @@ class Song(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), nullable=False)
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), nullable=False)
-    artist = db.relationship('Artist', backref=db.backref('songs', lazy=True))
+    artist = db.relationship('Artist', backref=db.backref('songs', lazy='dynamic'))
 
 
 class User(db.Model):
@@ -50,3 +50,22 @@ class User(db.Model):
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password, password)
+
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+
+    id = db.Column(db.String(2), primary_key=True)
+    name = db.Column(db.String(40), unique=True, nullable=False)
+
+
+class Bulletin(db.Model):
+    __tablename__ = 'bulletins'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user = db.relationship('User', backref=db.backref('bulletins', lazy='dynamic'))
+    role_id = db.Column(db.String(2), db.ForeignKey('roles.id'), nullable=True)
+    role = db.relationship('Role')
+    title = db.Column(db.String(80), nullable=False)
+    text = db.Column(db.String, nullable=False)
