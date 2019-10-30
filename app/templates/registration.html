@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+      {% if error %}
+        <p><strong>Error:</strong> {{ error }}
+      {% endif %}
+
+      <form method="POST" action="/registration">
+        Login: <input name="login"><br>
+        Password: <input type="password" name="password"><br>
+        RealName: <input name="realname"><br>
+        E-Mail: <input type="email" name="email" ><br>
+        <input type="submit" value="Register">
+      </form>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Articles list</h1>
+    {% for article in articles %}
+        <a href = "{{url_for('article', id=article.id)}}">{{article.title}}</a><br>
+    {% endfor %}
+{% endblock %}

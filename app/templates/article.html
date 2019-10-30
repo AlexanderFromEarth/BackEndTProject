@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+    <header>
+        <a href="{{ url_for('user', username=article.user.username)}}">{{article.user.username}}</a>
+    </header>
+    <h1>{{article.title}}</h1>
+    <div name="article_text">{{article.text}}</div>
+    {% if session.get('name') == article.user.username %}
+    <form method="GET" action="{{ url_for('change_articles', id=article.id) }}">
+        <input type="submit" value="Change">
+    </form>
+    {% endif %}
+{% endblock %}

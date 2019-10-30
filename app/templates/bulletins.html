@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Bulletin list</h1>
+    {% for bulletin in bulletins %}
+        <a href = "{{ url_for('bulletin', id=bulletin.id)}}">{{bulletin.title}}</a><br>
+    {% endfor %}
+{% endblock %}
