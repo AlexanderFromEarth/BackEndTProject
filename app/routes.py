@@ -125,6 +125,47 @@ def get_artist(id):
 
     return render_template('artist.html', artist=artist)
 
+@app.route('/artists/<id>/change', methods = ['GET','POST'])
+def change_artist(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if not artist:
+        abort(404)
+    
+    if request.method == 'GET':
+        return render_template('change_artist.html', artist=artist)
+    elif request.method == 'POST':
+        artist.name = request.form.get('name')
+        models.db.session.commit()
+        return redirect('/artists/{}'.format(artist.id))
+
+@app.route('/artists/<id>/change/add_member', methods = ['GET','POST'])   
+def add_member(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if request.method == 'POST':
+        user = models.User.query.filter_by(username = request.form.get('name')).first()
+        if not user:
+            return render_template('add_member.html', error='There is no user with this number',artist=artist)
+        artist.members.append(user)        
+        models.db.session.commit()
+        return redirect('/artists/{}'.format(artist.id))
+    elif request.method == 'GET':
+        return render_template('add_member.html',artist=artist)
+
+@app.route('/artists/<id>/change/delete_member', methods = ['GET','POST'])   
+def delete_member(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if request.method == 'GET':
+        return render_template('delete_member.html',artist=artist)
+    elif request.method == 'POST':
+        user = models.User.query.filter_by(username = request.form.get('name')).first()
+        if not user:
+            return render_template('add_member.html', error='There is no user with this number',artist=artist)
+        artist.members.remove(user)        
+        models.db.session.commit()
+        return redirect('/artists/{}'.format(artist.id))
 
 @app.route('/artists/create_artist', methods=['GET', 'POST'])
 def create_artist():
@@ -150,7 +191,7 @@ def create_artist():
 
 @app.route('/artists/<id>/settings/delete_artist', methods=['POST'])
 def delete_artist(id):
-    artist = models.Artist.filter_by(id).first()
+    artist = models.Artist.query.filter_by(id=id).first()
     models.db.session.delete(artist)
 
     try:
