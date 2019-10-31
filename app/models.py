@@ -11,12 +11,24 @@ class Article(db.Model):
     user = db.relationship('User', backref=db.backref('users', lazy='dynamic'))
 
 
+Member = db.Table('members',
+    db.Column('userID', db.Integer, db.ForeignKey('users.id')),
+    db.Column('artistID', db.Integer, db.ForeignKey('artists.id'))
+)
 class Artist(db.Model):
     __tablename__ = 'artists'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     creation_date = db.Column(db.Date, nullable=True)
+    members = db.relationship('User',secondary = Member)
+
+    def is_member(self,name):
+        b = False
+        for mem in self.members:
+            if mem.username == name:
+                b = True
+        return b
 
 
 class Song(db.Model):

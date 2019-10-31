@@ -1,7 +1,7 @@
 import sqlite3
 
 from datetime import date
-from errors import ValidationError
+from app.old.errors import ValidationError
 
 
 class SQLiteModel:

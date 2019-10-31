@@ -95,7 +95,7 @@ def settings():
 
 
 @app.route('/settings/delete_user', methods=['POST'])
-def delete():
+def delete_user():
     user = models.User.query.filter_by(username=session.get('name')).first()
     models.db.session.delete(user)
 
@@ -125,16 +125,111 @@ def get_artist(id):
 
     return render_template('artist.html', artist=artist)
 
+@app.route('/artists/<id>/change', methods = ['GET','POST'])
+def change_artist(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if not artist:
+        abort(404)
+    
+    if request.method == 'GET':
+        return render_template('change_artist.html', artist=artist)
+    elif request.method == 'POST':
+        artist.name = request.form.get('name')
+        models.db.session.commit()
+        return redirect('/artists/{}'.format(artist.id))
+
+@app.route('/artists/<id>/change/add_member', methods = ['GET','POST'])   
+def add_member(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if request.method == 'POST':
+        user = models.User.query.filter_by(username = request.form.get('name')).first()
+        if not user:
+            return render_template('add_member.html', error='There is no user with this number',artist=artist)
+        artist.members.append(user)        
+        models.db.session.commit()
+        return redirect('/artists/{}'.format(artist.id))
+    elif request.method == 'GET':
+        return render_template('add_member.html',artist=artist)
+
+@app.route('/artists/<id>/change/delete_member', methods = ['GET','POST'])   
+def delete_member(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if request.method == 'GET':
+        return render_template('delete_member.html',artist=artist)
+    elif request.method == 'POST':
+        user = models.User.query.filter_by(username = request.form.get('name')).first()
+        if not user:
+            return render_template('add_member.html', error='There is no user with this number',artist=artist)
+        artist.members.remove(user)        
+        models.db.session.commit()
+        return redirect('/artists/{}'.format(artist.id))
 
 @app.route('/artists/create_artist', methods=['GET', 'POST'])
 def create_artist():
-    pass
+    if request.method == 'POST':        
+        cur_user = models.User.query.filter_by(username=session.get('name')).first()
+        if not cur_user:
+            return redirect('/')
+        artist = models.Artist(name = request.form.get('name'),
+                               creation_date = datetime.date.today())
+
+        if models.Artist.query.filter_by(name= artist.name).first():
+            return render_template('add_artist.html', error='Name already exists')
+        artist.members.append(cur_user)
+        models.db.session.add(artist)
+        
+        try:
+            models.db.session.commit()
+        except IntegrityError:
+            models.db.session.rollback()
+        finally:
+            return redirect('/artists')
+    return render_template('add_artist.html')
+
+@app.route('/artists/<id>/settings/delete_artist', methods=['POST'])
+def delete_artist(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+    models.db.session.delete(artist)
+
+    try:
+        models.db.session.commit()
+    except IntegrityError:
+        models.db.session.rollback()
+    finally:
+        return redirect('/artists')
+
+
+@app.route('/articles')
+def articles():
+    articles = models.Article.query.all()
+    return render_template('articles.html', articles=articles)
 
 
 @app.route('/bulletins/')
 def bulletins():
     bulletins = models.Bulletin.query.all()
     return render_template('bulletins.html', bulletins=bulletins)
+
+
+@app.route('/articles/create', methods=['GET', 'POST'])
+def create_article():
+    if request.method == 'GET':
+        return render_template('create_article.html')
+    elif request.method == 'POST':
+        article = models.Article(
+            title=request.form.get('title'),
+            text=request.form.get('text'),
+            user=models.User.query.filter_by(username=session.get('name')).first()
+        )
+        try:
+            models.db.session.commit()
+        except IntegrityError:
+            models.db.session.rolback()
+        finally:
+            return redirect(f'/articles/{article.id}')
 
 
 @app.route('/bulletins/create', methods=['GET', 'POST'])
@@ -158,6 +253,16 @@ def create_bulletin():
             return redirect('/bulletins/{}'.format(bulletin.id))
 
 
+@app.route('/articles/<id>', methods=['GET'])
+def article(id):
+    article = models.Article.query.filter_by(id=id).first()
+
+    if not article:
+        abort(404)
+
+    return render_template('article.html', article=article)
+
+
 @app.route('/bulletins/<id>', methods=['GET'])
 def bulletin(id):
     bulletin = models.Bulletin.query.filter_by(id=id).first()
@@ -166,6 +271,24 @@ def bulletin(id):
         abort(404)
 
     return render_template('bulletin.html', bulletin=bulletin)
+
+
+@app.route('/articles/<id>/change', methods=['GET', 'POST'])
+def change_articles(id):
+    article = models.Article.query.filter_by(id=id).first()
+
+    if not bulletin:
+        abort(404)
+
+    if request.method == 'GET':
+        return render_template('change_articles.html', article=article)
+    elif request.method == 'POST':
+        article.title = request.form.get('title')
+        article.text = request.form.get('text')
+
+        models.db.session.commit()
+
+        return redirect(f'/articles/{article.id}')
 
 
 @app.route('/bulletins/<id>/change', methods=['GET', 'POST'])
@@ -184,7 +307,27 @@ def change_bulletins(id):
 
         models.db.session.commit()
 
-        return redirect('/bulletins/<id>')
+        return redirect(f'/bulletins/{bulletin.id}')
+
+
+@app.route('/articles/<id>/delete', methods=['POST'])
+def delete_articles(id):
+    article = models.Article.query.filter_by(id=id).first()
+
+    if not article:
+        abort(404)
+
+    if session.get('name') != article.user.username:
+        return redirect(f'/articles/{article.id}')
+
+    models.db.session.delete(article)
+
+    try:
+        models.db.session.commit()
+    except IntegrityError:
+        models.db.session.rollback()
+    finally:
+        return redirect('/articles')
 
 
 @app.route('/bulletins/<id>/delete', methods=['POST'])
@@ -195,7 +338,7 @@ def delete_bulletins(id):
         abort(404)
     
     if session.get('name') != bulletin.user.username:
-        return redirect('/bulletins/<id>')
+        return redirect(f'/bulletins/{bulletin.id}')
     
     models.db.session.delete(bulletin)
 
