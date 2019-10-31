@@ -1,0 +1,10 @@
+__pycache__/
+venv/
+env/
+bin/
+Scripts/
+lib/
+include/
+.idea/
+.vs/
+.vscode/
