@@ -23,6 +23,12 @@ class Artist(db.Model):
     creation_date = db.Column(db.Date, nullable=True)
     members = db.relationship('User',secondary = Member)
 
+    def is_member(self,name):
+        b = False
+        for mem in self.members:
+            if mem.username == name:
+                b = True
+        return b
 
 
 class Song(db.Model):
