@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-    <form method="POST" action="{{ url_for('delete_bulletins', id=bulletin.id) }}">
+    <form method="POST" action="{{ url_for('change_bulletins', id=bulletin.id) }}">
         Title: <input name="title" value="{{bulletin.title}}"><br>
         Text:  <input name="text" value="{{bulletin.text}}"><br>
         <input type="submit" value="Change"><br>
