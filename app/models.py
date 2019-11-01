@@ -8,22 +8,28 @@ class Article(db.Model):
     title = db.Column(db.String(80), nullable=False)
     text = db.Column(db.String(80), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('users', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('articles',
+                                                      lazy='dynamic'))
 
 
-Member = db.Table('members',
-    db.Column('userID', db.Integer, db.ForeignKey('users.id')),
-    db.Column('artistID', db.Integer, db.ForeignKey('artists.id'))
-)
+members = db.Table('members',
+                   db.Model.metadata,
+                   db.Column('userID', db.Integer,
+                             db.ForeignKey('users.id')),
+                   db.Column('artistID', db.Integer,
+                             db.ForeignKey('artists.id'))
+                   )
+
+
 class Artist(db.Model):
     __tablename__ = 'artists'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     creation_date = db.Column(db.Date, nullable=True)
-    members = db.relationship('User',secondary = Member)
+    members = db.relationship('User', secondary=members, backref='artists')
 
-    def is_member(self,name):
+    def is_member(self, name):
         b = False
         for mem in self.members:
             if mem.username == name:
@@ -36,8 +42,10 @@ class Song(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), nullable=False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), nullable=False)
-    artist = db.relationship('Artist', backref=db.backref('songs', lazy='dynamic'))
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'),
+                          nullable=False)
+    artist = db.relationship('Artist', backref=db.backref('songs',
+                                                          lazy='dynamic'))
 
 
 class User(db.Model):
@@ -70,7 +78,8 @@ class Bulletin(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('bulletins', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('bulletins',
+                                                      lazy='dynamic'))
     role_id = db.Column(db.String(2), db.ForeignKey('roles.id'), nullable=True)
     role = db.relationship('Role')
     title = db.Column(db.String(80), nullable=False)
