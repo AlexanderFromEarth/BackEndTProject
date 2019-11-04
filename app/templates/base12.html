@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <a href = "/">Main</a>
+        <a href = "/bulletins">Bulletins</a>
+        <a href = "/users">Users</a>
+        <a href = "/artists">Artists</a>
+        <a href = "/articles">Articles</a>
+        <a href = "/songs/add_song">Add song</a>
+        {% if not session.get('name') %}
+        <a href = "/login">Login</a>
+        <a href = "/registration">Registration</a>
+        {% else %}
+        <a href = "{{url_for('user', username=session.get('name'))}}">My Page</a>
+        <a href = "/bulletins/create">Create bulletins</a>
+        <a href = "/articles/create">Create article</a>
+        <a href= "/logout">Logout</a>
+        {% endif %}
+        <hr>
+            {% block content %}{% endblock %}
+    </body>
+</html>

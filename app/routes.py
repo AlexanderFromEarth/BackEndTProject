@@ -6,9 +6,10 @@ from sqlalchemy.exc import IntegrityError
 from . import app, bcrypt, lm, models
 
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def main():
-    return render_template('index.html')
+    articles=models.Article.query.all()
+    return render_template('index.html', articles=articles)
 
 
 @app.route('/login', methods=['GET', 'POST'])

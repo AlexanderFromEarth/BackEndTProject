@@ -1,4 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Main page!</h1>
+    <div class="main-container">
+        <div class="left-bar"></div>
+        <div class="main-content">
+            <div class="content-header">
+                СТАТЬИ
+                <img class="img-news" src="/static/Images/newspaper.png">
+            </div>
+            <div class="articles-content">
+                <ul type="none" style="padding: 0px;">
+                    {% for article in articles %}
+                        <li><a href="{{url_for('article', id=article.id)}}">{{article.title}}</a></li>
+                        <hr class="line-articles">
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="right-bar">
+            <div class="content-header" style="background: #c1a88d; color: 493c30;">
+                РАЗДЕЛЫ
+                <img class="img-news" src="/static/Images/open-magazine.png">
+            </div>
+            <div class="sections">
+                <a href="">ПОИСК МУЗЫКАНТОВ</a><hr>
+                <a href="">КУПЛЮ-ПРОДАМ</a><hr>
+                <a href="">ЗАДАТЬ ВОПРОС</a><hr>
+                <a href="">ТЕХ. ПОДДЕРЖКА</a><hr>
+                <a href="">ЧАТ</a>
+            </div>
+            <div class="content-header" style="background: #a68181; color: #563e3e">
+                ПОЛЕЗНАЯ ИНФОРМАЦИЯ<img class="img-info" src="/static/Images/information.png">
+            </div>
+            <div class="content-info">КАКАЯ-ТО ИНФА</div>
+        </div>
+    </div>
+
+
 {% endblock %}
