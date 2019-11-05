@@ -9,7 +9,8 @@ from . import app, bcrypt, lm, models
 @app.route('/', methods=['GET'])
 def main():
     articles=models.Article.query.all()
-    return render_template('index.html', articles=articles)
+    length = len(articles)-1
+    return render_template('index.html', articles=articles, len=length)
 
 
 @app.route('/login', methods=['GET', 'POST'])

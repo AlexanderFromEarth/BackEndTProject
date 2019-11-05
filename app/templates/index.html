@@ -9,10 +9,11 @@
             </div>
             <div class="articles-content">
                 <ul type="none" style="padding: 0px;">
-                    {% for article in articles %}
-                        <li><a href="{{url_for('article', id=article.id)}}">{{article.title}}</a></li>
+                    {% for i in range(len) %}
+                        <li><a href="{{url_for('article', id=articles[i].id)}}">{{articles[i].title}}</a></li>
                         <hr class="line-articles">
                     {% endfor %}
+                    <li><a href="{{url_for('article', id=articles[len].id)}}">{{articles[len].title}}</a></li>
                 </ul>
             </div>
         </div>
