@@ -8,3 +8,4 @@ include/
 .idea/
 .vscode/
 my.db
+SQLite Session.sql
