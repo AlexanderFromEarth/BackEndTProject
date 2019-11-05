@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+      {% if error %}
+<p>
+    <strong>Error:</strong> {{ error }}
+    {% endif %}
+
+    Name:<p>{{artist.name}}</p>
+    <form method="POST" action="{{url_for('delete_member', id=artist.id)}}">
+     Member name:<select name='name'>
+            {% for mem in artist.members %}
+            <option value="{{ mem.username }}" {% if loop.first %} SELECTED{% endif %}>{{ mem.username }}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Delete">
+    </form>
+    {% endblock %}

@@ -1,7 +1,10 @@
 __pycache__/
 venv/
 env/
-.idea/
+bin/
+lib/
+include/
 .vs/
+.idea/
 .vscode/
 my.db
