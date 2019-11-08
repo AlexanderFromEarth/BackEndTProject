@@ -1,9 +1,8 @@
 import datetime
 
-from flask import request, render_template, redirect, make_response, abort, session
-from sqlalchemy.exc import IntegrityError
+from flask import request, render_template, session, jsonify
 
-from . import app, bcrypt, lm, models
+from . import app, bcrypt, models
 
 
 @app.route('/', methods=['GET'])
@@ -13,21 +12,24 @@ def main():
     return render_template('index.html', articles=articles, len=length)
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['PUT'])
 def login():
-    if request.method == 'POST':
-        user = models.User.query.filter_by(username=request.form.get('login')).first()
+    user = models.User.query.filter_by(
+        username=request.json.get('login')
+        ).first()
 
-        if not user:
-            abort(404) # Need to change
+    if not user:
+        return ({'error': 'user is not defined'},
+                400,
+                {'content-type': 'application/json'})
 
-        if user.check_password(request.form.get('password')):
-            session['name'] = user.username
-            return redirect('/users/{}'.format(user.username))
-        else:
-            abort(404)
-    elif request.method == 'GET':
-        return render_template('login.html')
+    if not user.check_password(request.json.get('password')):
+        return ({'error': 'email is not defined'},
+                400,
+                {'content-type': 'application/json'})
+
+    session['username'] = user.username
+    return {}, 200, {'content-type': 'application/json'}
 
 
 @app.route('/logout')
@@ -35,234 +37,290 @@ def logout():
     if session.get('name'):
         del session['name']
 
-    return redirect('/')
+    return {}, 200, {'content-type': 'application/json'}
 
 
-@app.route('/registration', methods=['GET', 'POST']) 
+@app.route('/registration', methods=['POST'])
 def registration():
-    if request.method == "POST":
-        user = models.User(username=request.form.get('login'), 
-                           password=bcrypt.generate_password_hash(request.form.get('password'), 10),
-                           realname=request.form.get('realname'),
-                           email=request.form.get('email'))
+    user = models.User(username=request.json.get('login'),
+                       password=bcrypt.generate_password_hash(
+                           request.json.get('password'),
+                           10),
+                       realname=request.json.get('realname'),
+                       email=request.json.get('email'))
 
-        if models.User.query.filter_by(username=user.username).first():
-            return render_template('registration.html', error='Username already exists')
+    if models.User.query.filter_by(username=user.username).first():
+        return ({'error': 'username already exists'},
+                400,
+                {'content-type': 'application/json'})
 
-        if models.User.query.filter_by(email=user.email).first():
-            return render_template('registration.html', error='Email already exists')
+    if models.User.query.filter_by(email=user.email).first():
+        return ({'error': 'email already exists'},
+                400,
+                {'content-type': 'application/json'})
 
-        models.db.session.add(user)
-        
-        try:
-            models.db.session.commit()
-            session['name'] = user.username
-        except IntegrityError:
-            models.db.session.rollback()
-        finally:
-            return redirect('/users/{}'.format(user.username))
-    
-    return render_template("registration.html")
+    models.db.session.add(user)
 
+    models.db.session.commit()
+    session['name'] = user.username
 
-@app.route('/users/')
-def all_users():
-    users = models.User.query.all()
-    return render_template('users.html', users=users)
+    return {}, 200, {'content-type': 'application/json'}
 
 
-@app.route('/users/<username>', methods=['GET']) 
+@app.route('/users', methods=['GET'])
+def users():
+    return ({user.id: {
+                'username': user.username,
+                'email': user.email,
+                'artists': {artist.id: {
+                    'name': artist.name
+                } for artist in user.artists}
+                } for user in models.User.query.all()},
+            200, {'content-type': 'application/json'})
+
+
+@app.route('/users/<username>', methods=['GET', 'PUT', 'DELETE'])
 def user(username):
     user = models.User.query.filter_by(username=username).first()
 
     if not user:
-        abort(404)
+        return ({'error': 'user not found'},
+                404,
+                {'content-type': 'application/json'})
 
-    return render_template('user.html', user=user)
+    if request.method == 'PUT':
+        if username != session.get('name'):
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        user = models.User.query.filter_by(username=username).first()
+
+        if request.json.get('email'):
+            user.email = request.json['email']
+        if user.check_password(request.json.get(
+                                'old_pass')) and request.json.get('new_pass'):
+            user.set_password(request.json['new_pass'])
+
+        models.db.session.commit()
+
+        return {}, 200, {'content-type': 'application/json'}
+    elif request.method == 'DELETE':
+        if username != session.get('name'):
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        models.db.session.delete(user)
+
+        models.db.session.commit()
+        del session['name']
+
+        return {}, 200, {'content-type': 'application/json'}
+
+    return (jsonify(id=user.id,
+                    username=user.username,
+                    email=user.email,
+                    artists={artist.id: {
+                        'name': artist.name
+                        } for artist in user.artists}),
+            200,
+            {'content-type': 'application/json'})
 
 
-@app.route('/settings', methods=['GET', 'POST'])
-def settings():
-    cur_user = models.User.query.filter_by(username=session.get('name')).first()
-
-    if not cur_user:
-        return redirect('/')
-    
+@app.route('/artists', methods=['GET', 'POST'])
+def artists():
     if request.method == 'POST':
-        if cur_user.check_password(request.form.get('oldpass')):
-            cur_user.set_password(request.form.get('newpass'))
-            models.db.session.commit()
-    
-    return render_template('settings.html')
+        if not session.get('name'):
+            return ({'error': 'need to be auth'},
+                    400,
+                    {'content-type': 'application/json'})
 
+        artist = models.Artist(name=request.json.get('name'),
+                               creation_date=datetime.date.today())
 
-@app.route('/settings/delete_user', methods=['POST'])
-def delete_user():
-    user = models.User.query.filter_by(username=session.get('name')).first()
-    models.db.session.delete(user)
+        if models.Artist.query.filter_by(name=artist.name).first():
+            return ({'error': 'name already exists'},
+                    400,
+                    {'content-type': 'application/json'})
 
-    try:
-        models.db.session.commit()
-
-        if session.get('name'):
-            del session['name']
-    except IntegrityError:
-        models.db.session.rollback()
-    finally:
-        return redirect('/')
-
-
-@app.route('/artists')
-def get_all_artists():
-    aritsts = models.Artist.query.all()
-    return render_template('artists.html', artists=aritsts)
-
-
-@app.route('/artists/<id>')
-def get_artist(id):
-    artist = models.Artist.query.filter_by(id=id).first()
-
-    if not artist:
-        abort(404)
-
-    return render_template('artist.html', artist=artist)
-
-@app.route('/artists/<id>/change', methods = ['GET','POST'])
-def change_artist(id):
-    artist = models.Artist.query.filter_by(id=id).first()
-
-    if not artist:
-        abort(404)
-    
-    if request.method == 'GET':
-        return render_template('change_artist.html', artist=artist)
-    elif request.method == 'POST':
-        artist.name = request.form.get('name')
-        models.db.session.commit()
-        return redirect('/artists/{}'.format(artist.id))
-
-@app.route('/artists/<id>/change/add_member', methods = ['GET','POST'])   
-def add_member(id):
-    artist = models.Artist.query.filter_by(id=id).first()
-
-    if request.method == 'POST':
-        user = models.User.query.filter_by(username = request.form.get('name')).first()
-        if not user:
-            return render_template('add_member.html', error='There is no user with this number',artist=artist)
-        artist.members.append(user)        
-        models.db.session.commit()
-        return redirect('/artists/{}'.format(artist.id))
-    elif request.method == 'GET':
-        return render_template('add_member.html',artist=artist)
-
-@app.route('/artists/<id>/change/delete_member', methods = ['GET','POST'])   
-def delete_member(id):
-    artist = models.Artist.query.filter_by(id=id).first()
-
-    if request.method == 'GET':
-        return render_template('delete_member.html',artist=artist)
-    elif request.method == 'POST':
-        user = models.User.query.filter_by(username = request.form.get('name')).first()
-        if not user:
-            return render_template('add_member.html', error='There is no user with this number',artist=artist)
-        artist.members.remove(user)        
-        models.db.session.commit()
-        return redirect('/artists/{}'.format(artist.id))
-
-@app.route('/artists/create_artist', methods=['GET', 'POST'])
-def create_artist():
-    if request.method == 'POST':        
-        cur_user = models.User.query.filter_by(username=session.get('name')).first()
-        if not cur_user:
-            return redirect('/')
-        artist = models.Artist(name = request.form.get('name'),
-                               creation_date = datetime.date.today())
-
-        if models.Artist.query.filter_by(name= artist.name).first():
-            return render_template('add_artist.html', error='Name already exists')
-        artist.members.append(cur_user)
+        artist.members.append(models.User.query.filter_by(
+                                            username=session['name']).first())
         models.db.session.add(artist)
-        
-        try:
-            models.db.session.commit()
-        except IntegrityError:
-            models.db.session.rollback()
-        finally:
-            return redirect('/artists')
-    return render_template('add_artist.html')
 
-@app.route('/artists/<id>/settings/delete_artist', methods=['POST'])
-def delete_artist(id):
-    artist = models.Artist.query.filter_by(id=id).first()
-    models.db.session.delete(artist)
-
-    try:
         models.db.session.commit()
-    except IntegrityError:
-        models.db.session.rollback()
-    finally:
-        return redirect('/artists')
+
+        return {}, 200, {'content-type': 'application/json'}
+
+    return ({artist.id: {
+                'name': artist.name,
+                'users': {user.id: {
+                    'id': artist.id,
+                    'name': artist.name
+                    } for user in artist.users
+                    }} for artist in models.Artist.query.all()},
+            200, {'content-type': 'application/json'})
 
 
-@app.route('/articles')
+@app.route('/artists/<id>', methods=['GET', 'PUT', 'DELETE'])
+def artist(id):
+    artist = models.Artist.query.filter_by(id=id).first()
+
+    if not artist:
+        return ({'error': 'artist not found'},
+                404,
+                {'content-type': 'application/json'})
+
+    if request.method == 'PUT':
+        if session.get['name'] not in [user.username for user in artist.users]:
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        if request.json.get('name'):
+            artist.name = request.json['name']
+        if request.json.get('members'):
+            try:
+                for member in request.json['members']:
+                    user = models.User.query.filter_by(username=member).first()
+
+                    if user:
+                        artist.members.add(user)
+            except TypeError as e:
+                return ({'error': e},
+                        400,
+                        {'content-type': 'application/json'})
+
+        return {}, 200, {'content-type': 'application/json'}
+    elif request.method == 'DELETE':
+        if session.get['name'] not in [user.username for user in artist.users]:
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        models.db.session.delete(artist)
+
+        models.db.session.commit()
+
+        return {}, 200, {'content-type': 'application/json'}
+    return (jsonify(id=artist.id,
+                    name=artist.name,
+                    users={user.id: {
+                        'username': user.username,
+                        'email': user.email
+                        } for user in artist.users}),
+            200,
+            {'content-type': 'application/json'})
+
+
+@app.route('/articles', methods=['GET', 'POST'])
 def articles():
-    articles = models.Article.query.all()
-    return render_template('articles.html', articles=articles)
+    if request.method == 'POST':
+        if not session.get('name'):
+            return ({'error': 'need to be auth'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        article = models.Article(title=request.json.get('title'),
+                                 text=request.json.get('text'))
+
+        if models.Article.query.filter_by(title=article.title).first():
+            return ({'error': 'title already exists'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        article.user.append(models.User.query.filter_by(
+                                    username=session['name']).first())
+        models.db.session.add(article)
+
+        models.db.session.commit()
+
+        return {}, 200, {'content-type': 'application/json'}
+
+    return ({article.id: {
+                'title': article.title,
+                'owner': {
+                    'id': article.user.id,
+                    'name': article.user.name
+                    }} for artist in models.Artist.query.all()},
+            200, {'content-type': 'application/json'})
 
 
-@app.route('/bulletins/')
+@app.route('/bulletins', methods=['GET', 'POST'])
 def bulletins():
-    bulletins = models.Bulletin.query.all()
-    return render_template('bulletins.html', bulletins=bulletins)
+    if request.method == 'POST':
+        if not session.get('name'):
+            return ({'error': 'need to be auth'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        bulletin = models.Bulletin(title=request.json.get('title'),
+                                   role=models.Role.query.filter_by(
+                                       name=request.json.get('role')).first(),
+                                   text=request.json.get('text'))
+
+        if models.Article.query.filter_by(title=bulletin.title).first():
+            return ({'error': 'title already exists'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        bulletin.user.append(models.User.query.filter_by(
+                                    username=session['name']).first())
+        models.db.session.add(bulletin)
+
+        models.db.session.commit()
+
+        return {}, 200, {'content-type': 'application/json'}
+
+    return ({bulletin.id: {
+                'title': bulletin.title,
+                'role': bulletin.role.name,
+                'owner': {
+                    'id': bulletin.user.id,
+                    'name': bulletin.user.name
+                    }} for bulletin in models.Bulletin.query.all()},
+            200, {'content-type': 'application/json'})
 
 
-@app.route('/articles/create', methods=['GET', 'POST'])
-def create_article():
-    if request.method == 'GET':
-        return render_template('create_article.html')
-    elif request.method == 'POST':
-        article = models.Article(
-            title=request.form.get('title'),
-            text=request.form.get('text'),
-            user=models.User.query.filter_by(username=session.get('name')).first()
-        )
-        try:
-            models.db.session.commit()
-        except IntegrityError:
-            models.db.session.rolback()
-        finally:
-            return redirect(f'/articles/{article.id}')
-
-
-@app.route('/bulletins/create', methods=['GET', 'POST'])
-def create_bulletin():
-    if not session.get('name'):
-        return redirect('/bulletins')
-
-    if request.method == 'GET':
-        return render_template('create_bulletin.html', roles=models.Role.query.all())
-    elif request.method == 'POST':
-        bulletin = models.Bulletin(title=request.form.get('title'), 
-                                   text=request.form.get('text'), 
-                                   user=models.User.query.filter_by(username=session.get('name')).first(),
-                                   role=models.Role.query.filter_by(name=request.form.get('role')).first())
-        
-        try:
-            models.db.session.commit()
-        except IntegrityError:
-            models.db.session.rollback()
-        finally:
-            return redirect('/bulletins/{}'.format(bulletin.id))
-
-
-@app.route('/articles/<id>', methods=['GET'])
+@app.route('/articles/<id>', methods=['GET', 'PUT', 'DELETE'])
 def article(id):
     article = models.Article.query.filter_by(id=id).first()
 
     if not article:
-        abort(404)
+        return ({'error': 'article not found'},
+                404,
+                {'content-type': 'application/json'})
 
-    return render_template('article.html', article=article)
+    if request.method == 'PUT':
+        if session.get['name'] == article.user.username:
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        if request.json.get('title'):
+            article.title = request.json['title']
+        if request.json.get('text'):
+            article.text = request.json['text']
+
+        return {}, 200, {'content-type': 'application/json'}
+    elif request.method == 'DELETE':
+        if session.get['name'] == article.user.username:
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
+
+        models.db.session.delete(article)
+
+        models.db.session.commit()
+
+        return {}, 200, {'content-type': 'application/json'}
+    return (jsonify(id=article.id,
+                    title=article.title,
+                    owner={'id': article.user.id,
+                           'username': article.user.username,
+                           'email': article.user.email}),
+            200,
+            {'content-type': 'application/json'})
 
 
 @app.route('/bulletins/<id>', methods=['GET'])
@@ -270,109 +328,46 @@ def bulletin(id):
     bulletin = models.Bulletin.query.filter_by(id=id).first()
 
     if not bulletin:
-        abort(404)
+        return ({'error': 'bulletin not found'},
+                404,
+                {'content-type': 'application/json'})
 
-    return render_template('bulletin.html', bulletin=bulletin)
+    if request.method == 'PUT':
+        if session.get['name'] == bulletin.user.username:
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
 
+        if request.json.get('title'):
+            bulletin.title = request.json['title']
+        if request.json.get('text'):
+            bulletin.text = request.json['text']
+        if request.json.get('role'):
+            role = models.Role.quert.filter_by(
+                            name=request.json['role']).first()
 
-@app.route('/articles/<id>/change', methods=['GET', 'POST'])
-def change_articles(id):
-    article = models.Article.query.filter_by(id=id).first()
+            if role:
+                bulletin.role = role
 
-    if not bulletin:
-        abort(404)
+        return {}, 200, {'content-type': 'application/json'}
+    elif request.method == 'DELETE':
+        if session.get['name'] == bulletin.user.username:
+            return ({'error': 'not for this user'},
+                    400,
+                    {'content-type': 'application/json'})
 
-    if request.method == 'GET':
-        return render_template('change_articles.html', article=article)
-    elif request.method == 'POST':
-        article.title = request.form.get('title')
-        article.text = request.form.get('text')
-
-        models.db.session.commit()
-
-        return redirect(f'/articles/{article.id}')
-
-
-@app.route('/bulletins/<id>/change', methods=['GET', 'POST'])
-def change_bulletins(id):
-    bulletin = models.Bulletin.query.filter_by(id=id).first()
-
-    if not bulletin:
-        abort(404)
-    
-    if request.method == 'GET':
-        return render_template('change_bulletin.html', bulletin=bulletin)
-    elif request.method == 'POST':
-        bulletin.title = request.form.get('title')
-        bulletin.text = request.form.get('text')
-        bulletin.role = request.form.get('role')
+        models.db.session.delete(bulletin)
 
         models.db.session.commit()
 
-        return redirect(f'/bulletins/{bulletin.id}')
-
-
-@app.route('/articles/<id>/delete', methods=['POST'])
-def delete_articles(id):
-    article = models.Article.query.filter_by(id=id).first()
-
-    if not article:
-        abort(404)
-
-    if session.get('name') != article.user.username:
-        return redirect(f'/articles/{article.id}')
-
-    models.db.session.delete(article)
-
-    try:
-        models.db.session.commit()
-    except IntegrityError:
-        models.db.session.rollback()
-    finally:
-        return redirect('/articles')
-
-
-@app.route('/bulletins/<id>/delete', methods=['POST'])
-def delete_bulletins(id):
-    bulletin = models.Bulletin.query.filter_by(id=id).first()
-
-    if not bulletin:
-        abort(404)
-    
-    if session.get('name') != bulletin.user.username:
-        return redirect(f'/bulletins/{bulletin.id}')
-    
-    models.db.session.delete(bulletin)
-
-    try:
-        models.db.session.commit()
-    except IntegrityError:
-        models.db.session.rollback()
-    finally:
-        return redirect('/bulletins')
-
-
-@app.route('/articles')
-def get_all_articles():
-    pass
-
-
-@app.route('/articles/<id>')
-def get_article(id):
-    pass
-
-
-@app.route('/songs')
-def get_all_songs():
-    pass
-
-
-@app.route('/songs/<int:id>', methods = ['GET','POST'])
-def song(id):
-      return render_template(
-          "song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date(2019,3,5))
-
-
-@app.route('/songs/add_song')
-def add_song():
-      return render_template("song.html",author ='Константин',title = 'Берет гитару',song_duration = '300',publication_date = datetime.date.today())
+        return {}, 200, {'content-type': 'application/json'}
+    return (jsonify(id=bulletin.id,
+                    title=bulletin.title,
+                    role={'id': bulletin.role.id,
+                          'name': bulletin.role.name
+                          },
+                    owner={'id': bulletin.user.id,
+                           'username': bulletin.user.username,
+                           'email': bulletin.user.email}),
+            200,
+            {'content-type': 'application/json'})
