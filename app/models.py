@@ -30,11 +30,7 @@ class Artist(db.Model):
     members = db.relationship('User', secondary=members, backref='artists')
 
     def is_member(self, name):
-        b = False
-        for mem in self.members:
-            if mem.username == name:
-                b = True
-        return b
+        return name in [user.username for user in members]
 
 
 class Song(db.Model):

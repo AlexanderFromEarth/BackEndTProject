@@ -7,7 +7,7 @@ from . import app, bcrypt, models
 
 @app.route('/', methods=['GET'])
 def main():
-    articles=models.Article.query.all()
+    articles = models.Article.query.all()
     length = len(articles)-1
     return render_template('index.html', articles=articles, len=length)
 
@@ -65,67 +65,6 @@ def registration():
     session['name'] = user.username
 
     return {}, 200, {'content-type': 'application/json'}
-
-
-@app.route('/users', methods=['GET'])
-def users():
-    return ({user.id: {
-                'username': user.username,
-                'email': user.email,
-                'artists': {artist.id: {
-                    'name': artist.name
-                } for artist in user.artists}
-                } for user in models.User.query.all()},
-            200, {'content-type': 'application/json'})
-
-
-@app.route('/users/<username>', methods=['GET', 'PUT', 'DELETE'])
-def user(username):
-    user = models.User.query.filter_by(username=username).first()
-
-    if not user:
-        return ({'error': 'user not found'},
-                404,
-                {'content-type': 'application/json'})
-
-    if request.method == 'PUT':
-        if username != session.get('name'):
-            return ({'error': 'not for this user'},
-                    400,
-                    {'content-type': 'application/json'})
-
-        user = models.User.query.filter_by(username=username).first()
-
-        if request.json.get('email'):
-            user.email = request.json['email']
-        if user.check_password(request.json.get(
-                                'old_pass')) and request.json.get('new_pass'):
-            user.set_password(request.json['new_pass'])
-
-        models.db.session.commit()
-
-        return {}, 200, {'content-type': 'application/json'}
-    elif request.method == 'DELETE':
-        if username != session.get('name'):
-            return ({'error': 'not for this user'},
-                    400,
-                    {'content-type': 'application/json'})
-
-        models.db.session.delete(user)
-
-        models.db.session.commit()
-        del session['name']
-
-        return {}, 200, {'content-type': 'application/json'}
-
-    return (jsonify(id=user.id,
-                    username=user.username,
-                    email=user.email,
-                    artists={artist.id: {
-                        'name': artist.name
-                        } for artist in user.artists}),
-            200,
-            {'content-type': 'application/json'})
 
 
 @app.route('/artists', methods=['GET', 'POST'])
