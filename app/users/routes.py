@@ -1,6 +1,7 @@
 from datetime import date
 from .models import User, UserSchema, db
 from flask import request, jsonify, url_for, Blueprint
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -14,7 +15,8 @@ users_schema = UserSchema(exclude=('password',),
 def main():
     return {
         'users_url': url_for('users.users', _external=True),
-        'user_url': url_for('users.user', username='', _external=True)
+        'user_url': url_for('users.user', username='', _external=True),
+        'cur_user_url': url_for('users.cur_user', _external=True)
     }
 
 
@@ -52,8 +54,20 @@ def users():
     return jsonify(users_schema.dump(User.query.all())), 200
 
 
-@bp.route('/users/<username>', methods=['GET', 'PUT', 'DELETE'])
+@bp.route('/users/<username>', methods=['GET'])
 def user(username):
+    user = User.query.filter_by(username=username).first()
+
+    if not user:
+        return {'error': 'user not found'}, 404
+
+    return user_schema.dump(user), 200
+
+
+@bp.route('/user', methods=['GET', 'PUT', 'DELETE'])
+@jwt_required
+def cur_user():
+    username = get_jwt_identity()
     user = User.query.filter_by(username=username).first()
 
     if not user:

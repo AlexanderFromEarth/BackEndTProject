@@ -7,4 +7,4 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///{}'.format(os.path.join(
                                                             __file__
                                                             )),
                                                     'my.db'))
-SECRET_KEY = 'GOMOGAMER'
+SECRET_KEY = 'nasosalibabi'
