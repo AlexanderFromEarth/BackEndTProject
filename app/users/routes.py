@@ -20,7 +20,8 @@ def main():
     }
 
 
-@bp.route('/users', methods=['GET', 'POST'])
+@bp.route('/registration', methods=['POST'])
+@bp.route('/users', methods=['GET'])
 def users():
     if request.method == 'POST':
         if not request.json:

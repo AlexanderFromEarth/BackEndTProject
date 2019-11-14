@@ -1,4 +1,4 @@
-from . import bc, db
+from . import bc, db, ma
 
 
 class User(db.Model):
@@ -13,5 +13,12 @@ class User(db.Model):
             self.password = bc.generate_password_hash(password)
 
     def check_password(self, password):
-        if password:
+        if self.password and password:
             return bc.check_password_hash(self.password, password)
+        else:
+            return False
+
+
+class UserSchema(ma.ModelSchema):
+    class Meta:
+        model = User
