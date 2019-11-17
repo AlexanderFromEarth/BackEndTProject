@@ -16,4 +16,4 @@ class SongSchema(ma.ModelSchema):
     class Meta:
         model = Song
 
-    url = ma.URLFor('songs.song', songtitle='<songtitle>', _external=True)
+    url = ma.URLFor('songs.song', title='<title>', _external=True)
