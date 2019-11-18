@@ -1,23 +1,12 @@
 from datetime import date
 from .models import User, UserSchema, db
-from flask import request, jsonify, url_for, Blueprint
+from flask import request, jsonify, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
 
 
 bp = Blueprint('users', __name__)
 user_schema = UserSchema(exclude=('password',))
-users_schema = UserSchema(exclude=('password',),
-                          many=True)
-
-
-@bp.route('/', methods=['GET'])
-def main():
-    return {
-        'users_url': url_for('users.users', _external=True),
-        'user_url': url_for('users.user', username='', _external=True),
-        'cur_user_url': url_for('users.cur_user', _external=True)
-    }
 
 
 @bp.route('/registration', methods=['POST'])
@@ -52,7 +41,7 @@ def users():
 
         return {}, 201
 
-    return jsonify(users_schema.dump(User.query.all())), 200
+    return jsonify(user_schema.dump(User.query.all(), many=True)), 200
 
 
 @bp.route('/users/<username>', methods=['GET'])
@@ -68,8 +57,8 @@ def user(username):
 @bp.route('/user', methods=['GET', 'PUT', 'DELETE'])
 @jwt_required
 def cur_user():
-    username = get_jwt_identity()
-    user = User.query.filter_by(username=username).first()
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(id=user_id).first()
 
     if not user:
         error_code = 404 if request.method == 'GET' else 204

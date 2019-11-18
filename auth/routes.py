@@ -19,22 +19,22 @@ def login_by_json(json):
 
 def validate(username, password):
     if username and password:
-        return get_token(username, password)
+        return get_token(get_user_data(username), password)
     else:
         return {'error': 'missing data'}, 401
 
 
-def get_token(username, password):
-    if compare(get_user_hash(username), password):
-        return {'access_token': create_access_token(username)}, 200
+def get_token(user, password):
+    if compare(user.get('password'), password):
+        return {'access_token': create_access_token(user.get('id'))}, 200
     else:
         return {'error': 'wrong data'}, 401
 
 
-def get_user_hash(username):
+def get_user_data(username):
     return UserSchema().dump(
                 User.query.filter_by(username=username).first()
-            ).get('password')
+            )
 
 
 def compare(passwd_hash, passwd):
