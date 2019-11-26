@@ -1,47 +1,32 @@
-from datetime import date
-from .models import User, UserSchema, db
 from flask import request, jsonify, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
-
+from marshmallow.exceptions import MarshmallowError
+from .models import User, UserSchema, db
 
 bp = Blueprint('users', __name__)
-user_schema = UserSchema(exclude=('password',))
 
 
-@bp.route('/registration', methods=['POST'])
-@bp.route('/users', methods=['GET'])
+@bp.route('/users', methods=['GET', 'POST'])
 def users():
     if request.method == 'POST':
         if not request.json:
             return {'error': 'no data'}, 400
 
-        username = request.json.get('username')
-        password = request.json.get('password')
-        email = request.json.get('email')
-        realname = request.json.get('realname')
-        phone_number = request.json.get('phone_number')
-        birth_date = request.json.get('birth_date')
-
-        user = User(username=username,
-                    realname=realname,
-                    email=email,
-                    phone_number=phone_number,
-                    birth_date=birth_date,
-                    registration_date=date.today())
-        user.set_password(password)
-
-        db.session.add(user)
-
         try:
+            db.session.add(UserSchema().load(request.json))
             db.session.commit()
+        except MarshmallowError as error:
+            return {'error': error.args[0]}, 400
         except SQLAlchemyError as error:
             db.session.rollback()
-            return {'error': error.args}, 400
+            return {'error': error.args[0]}, 400
 
         return {}, 201
 
-    return jsonify(user_schema.dump(User.query.all(), many=True)), 200
+    return jsonify(UserSchema(exclude=('password',)).dump(
+        User.query.all(), many=True
+    )), 200
 
 
 @bp.route('/users/<username>', methods=['GET'])
@@ -51,18 +36,17 @@ def user(username):
     if not user:
         return {'error': 'user not found'}, 404
 
-    return user_schema.dump(user), 200
+    return UserSchema(exclude=('password',)).dump(user), 200
 
 
 @bp.route('/user', methods=['GET', 'PUT', 'DELETE'])
 @jwt_required
 def cur_user():
     user_id = get_jwt_identity()
-    user = User.query.filter_by(id=user_id).first()
+    user = User.query.get(user_id)
 
     if not user:
-        error_code = 404 if request.method == 'GET' else 204
-        return {'error': 'user not found'}, error_code
+        return {'error': 'user not found'}, 204
 
     if request.method == 'PUT':
         if request.json.get('email'):
@@ -89,4 +73,4 @@ def cur_user():
 
         return {}, 200
 
-    return user_schema.dump(user), 200
+    return UserSchema(exclude=('password',)).dump(user), 200

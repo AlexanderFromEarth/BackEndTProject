@@ -1,29 +1,26 @@
-from datetime import date
-from .models import Artist, ArtistSchema, Member, MemberSchema, db
 from flask import request, jsonify, Blueprint
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
-
+from .models import Artist, ArtistSchema, MemberSchema, db
 
 bp = Blueprint('artists', __name__)
-artist_schema = ArtistSchema()
 
 
 @bp.route('/artists', methods=['POST'])
-@jwt_required
-def mkartist():
+def mkartist() -> (dict, int):
+    """
+    Creates new artist.
+
+    Args:
+        Json in request that matches to ArtistSchema.
+
+    Returns:
+        Empty dict and 200 if OK else error message and 400.
+    """
     if not request.json:
         return {'error': 'no data'}, 400
 
-    name = request.json.get('name')
-
-    artist = Artist(name=name,
-                    creation_date=date.today())
-
-    db.session.add(artist)
+    db.session.add(ArtistSchema().load(request.json))
     db.session.flush()
-    user_id = get_jwt_identity()
-    db.session.add(Member(artist_id=artist.id, user_id=user_id))
 
     try:
         db.session.commit()
@@ -35,32 +32,32 @@ def mkartist():
 
 
 @bp.route('/artists', methods=['GET'])
-def artists():
-    return jsonify(artist_schema.dump(Artist.query.all(), many=True)), 200
+def artists() -> (dict, int):
+    """
+    Returns list of artists.
+
+    Returns:
+        Jsonized list of dicts that match to ArtisSchema.
+    """
+    return jsonify(ArtistSchema().dump(Artist.query.all(), many=True)), 200
 
 
-@bp.route('/artists/<id>', methods=['GET'])
-def artist(id):
+@bp.route('/artists/<int:id>', methods=['GET'])
+def artist(id: int) -> (dict, int):
     artist = Artist.query.get(id)
 
     if not artist:
         return {'error': 'data not found'}, 404
 
-    return jsonify(artist_schema.dump(artist)), 200
+    return jsonify(ArtistSchema().dump(artist)), 200
 
 
-@bp.route('/artists/<id>', methods=['PUT', 'DELETE'])
-@jwt_required
-def chartist(id):
+@bp.route('/artists/<int:id>', methods=['PUT', 'DELETE'])
+def chartist(id: int) -> (dict, int):
     artist = Artist.query.get(id)
 
     if not artist:
         return {'error': 'data not found'}, 404
-
-    user_id = get_jwt_identity()
-
-    if user_id not in [member.user_id for member in artist.members]:
-        return {'error': 'bad login'}, 401
 
     if request.method == 'PUT':
         if not request.json:
@@ -73,9 +70,6 @@ def chartist(id):
 
             for member in members:
                 artist.members.append(MemberSchema().load(member))
-
-        if request.json.get('name'):
-            artist.name = request.json['name']
     elif request.method == 'DELETE':
         db.session.delete(artist)
 

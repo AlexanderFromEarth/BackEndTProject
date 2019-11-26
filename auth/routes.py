@@ -1,6 +1,6 @@
-from .models import User, UserSchema, bc
 from flask import request, Blueprint
 from flask_jwt_extended import create_access_token
+from .models import User, UserSchema, bc
 
 bp = Blueprint('auth', __name__)
 

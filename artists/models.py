@@ -1,4 +1,9 @@
-from . import db, ma
+from datetime import date
+from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
+
+db = SQLAlchemy()
+ma = Marshmallow()
 
 
 class Artist(db.Model):
@@ -6,9 +11,9 @@ class Artist(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
-    creation_date = db.Column(db.Date, nullable=True)
+    creation_date = db.Column(db.Date, nullable=True, default=date.today)
 
-    def is_member(self, id):
+    def is_member(self, id: int) -> bool:
         return id in [member.user_id for member in self.members]
 
 

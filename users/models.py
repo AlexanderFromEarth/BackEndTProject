@@ -1,4 +1,11 @@
-from . import bc, db, ma
+from datetime import date
+from flask_bcrypt import Bcrypt
+from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
+
+db = SQLAlchemy()
+bc = Bcrypt()
+ma = Marshmallow()
 
 
 class User(db.Model):
@@ -6,16 +13,16 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.Binary, nullable=False)
-    email = db.Column(db.String, unique=True, nullable=False)
+    password = db.Column(db.Binary,  nullable=False)
+    email = db.Column(db.String(60), unique=True, nullable=False)
     realname = db.Column(db.String(120), nullable=False)
     birth_date = db.Column(db.Date, nullable=True)
-    registration_date = db.Column(db.Date, nullable=False)
+    registration_date = db.Column(db.Date, nullable=False, default=date.today)
     phone_number = db.Column(db.String, nullable=True)
 
-    def set_password(self, password):
-        if password:
-            self.password = bc.generate_password_hash(password)
+    @db.validates('password')
+    def validate_password(self, key, password):
+        return bc.generate_password_hash(password)
 
     def check_password(self, password):
         if password:
