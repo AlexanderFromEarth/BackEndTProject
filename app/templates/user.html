@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% block content %}
-    Имя: <p>{{user.realname}}</p><br>
-    {% if user.username == session.get('name') %}
-        <form method="GET" action="/settings">
-            <input type="submit" value="Settings">
-        </form>
-    {% endif %}
-{% endblock %}
